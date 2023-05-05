@@ -1,0 +1,9 @@
+The output is just a line for each row of the magic square. The number for each "cell" in a row is printed in four spaces right justified.
+
+For example here is one of the solutions for n = 3. The numbers 1234 are above what would actually be printed to indicate to you the position on the line where the numbers in the solution would be placed
+and are not part of what is actually printed.
+
+123412341234
+   2   7   9
+   9   5   1
+   4   3   8

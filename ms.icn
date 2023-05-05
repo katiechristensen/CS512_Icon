@@ -1,0 +1,251 @@
+x# Katie Christensen
+# March 10, 2023
+# CSCI 512
+
+link options
+
+global n, magic_constant, findall, printeach, solution, nths, available_nums, count, lastsolution
+
+procedure main(args)
+    local opts, i 
+    
+    opts := options(args, "nae")
+    n := integer(get(args)) | 3   # default order of magic square is 3
+
+    if \opts["a"] then findall := "yes"
+    if \opts["e"] then printeach := "yes"
+
+    if n = 2 then stop("There is no magic solution of order 2.")
+    if n <= 0 then stop("n must be greater than 0.")
+
+    magic_constant := ((n * ((n * n) + 1)) / 2)  # rows, cols, diagonals sum to this number
+
+    nths := list(n * n + 2, 0)  # list of routines
+    solution := list(n * n, 0)  # list of cell solutions
+    count := 0
+
+    nths[1] := &main    # 1st routine is main
+    every i := 1 to n * n do 
+        nths[i+1] := create s(i)    # routines, one per cell
+    nths[n * n + 2] := create show()    # n+2nd is the display routine
+
+    @nths[2]  # start by placing a number in the first cell
+
+    if \lastsolution then print_final_square(lastsolution)
+    if count ~= 0 then write(count)
+end
+
+
+#       ---------------------------- s ----------------------------
+# Place a number in cell c of the magic square (this is the c+1st routine).
+procedure s(c)
+    local val, k
+    static rows, cols, diagonal_down, diagonal_up, index, previous_index
+
+    initial {
+        rows := list(n, 0)          # list of sums. For e.g., rows[1] = the sum of row 1
+        cols := list (n, 0)         # list of sums. For e.g., cols[1] = the sum of col 1
+        diagonal_up := list(1, 0)   # list of sums. For e.g., diagonal_up[1] = the sum of the upwards diagonal
+        diagonal_down := list(1, 0) # list of sums. For e.g., diagonal_down[1] = the sum of the downwards diagonal
+        index := 0
+        previous_index := 0
+    }
+    
+    repeat {
+        #every i := 1 to n * n do {
+        #    if i_in_solution(i) = 0 then {
+                if c = n * n then {  # if c is the very final cell
+                    val := magic_constant - rows[n]
+		    #val := i
+
+                    if val > 0 & val <= n * n & rows[n] + val = magic_constant & cols[n] + val = magic_constant & diagonal_down[1] + val = magic_constant & i_in_solution(val) = 0 then {
+                        rows[n] +:= val
+                        cols[n] +:= val
+                        diagonal_down[1] +:= val
+                        solution[c] := val
+
+                        # If we hit here, we've found a full square :)
+
+			@nths[c + 2]
+
+                        rows[n] -:= val
+                        cols[n] -:= val
+                        diagonal_down[1] -:= val
+                        solution[c] := 0
+                    }  
+                }
+                else if c = (n * (n - 1)) + 1 then {  # if c is the first col of final row
+                    val := magic_constant - cols[1] 
+
+                    if val > 0 & val <= n * n & diagonal_up[1] + val = magic_constant & i_in_solution(val) = 0 then {
+                        rows[n] +:= val 
+                        cols[1] +:= val
+                        diagonal_up[1] +:= val
+                        solution[c] := val
+
+                        @nths[c + 2]
+
+                        rows[n] -:= val 
+                        cols[1] -:= val
+                        diagonal_up[1] -:= val
+                        solution[c] := 0
+                    }   
+                }
+                else if c % n = 0 then {  # if c is the last column of any row
+                    val := magic_constant - rows[c / n]
+                    
+                    if val > 0 & val <= n * n & i_in_solution(val) = 0 & rows[1 + ((c - 1) / n)] + val <= magic_constant then {  
+                        rows[c / n] +:= val
+                        cols[n] +:= val 
+                        if c / n = 1 then diagonal_up[1] +:= val
+                        solution[c] := val
+
+                        @nths[c + 2]
+
+                        rows[c / n] -:= val
+                        cols[n] -:= val 
+                        if c / n = 1 then diagonal_up[1] -:= val
+                        solution[c] := 0
+                    }   
+                }
+                else {     # if c is anywhere else
+		    every i := 1 to n * n do {
+			if i_in_solution(i) = 0 then {
+                    val := i 
+
+                    if rows[1 + ((c - 1) / n)] + val <= magic_constant & cols[1 + ((c - 1) % n)] + val <= magic_constant then {
+                        if n % 2 ~= 0 & ((1 + ((c - 1) / n)) = (1 + ((c - 1) % n))) & (((1 + ((c - 1) / n)) + (1 + ((c - 1) % n))) = (n + 1)) then { 
+                            if diagonal_down[1] + val <= magic_constant & diagonal_up[1] + val <= magic_constant then {
+                                diagonal_up[1] +:= val
+                                diagonal_down[1] +:= val
+                                
+                                rows[1 + ((c - 1) / n)] +:= val
+                                cols[1 + ((c - 1) % n)] +:= val
+
+                                solution[c] := val 
+
+                                @nths[c + 2]
+                                
+                                rows[1 + ((c - 1) / n)] -:= val
+                                cols[1 + ((c - 1) % n)] -:= val
+                                diagonal_up[1] -:= val
+                                diagonal_down[1] -:= val
+                                solution[c] := 0
+                            }
+                        } else if (1 + ((c - 1) / n)) = (1 + ((c - 1) % n)) then {
+                            if diagonal_down[1] + val <= magic_constant then {
+                                diagonal_down[1] +:= val
+
+                                rows[1 + ((c - 1) / n)] +:= val
+                                cols[1 + ((c - 1) % n)] +:= val
+
+                                solution[c] := val 
+
+                                @nths[c + 2]
+                                
+                                rows[1 + ((c - 1) / n)] -:= val
+                                cols[1 + ((c - 1) % n)] -:= val
+                                diagonal_down[1] -:= val
+                                solution[c] := 0
+                            }
+                        } 
+                        else if ((1 + ((c - 1) / n)) + (1 + ((c - 1) % n))) = (n + 1) then {
+                            if diagonal_up[1] + val <= magic_constant then {
+                                diagonal_up[1] +:= val
+
+                                rows[1 + ((c - 1) / n)] +:= val
+                                cols[1 + ((c - 1) % n)] +:= val
+
+                                solution[c] := val 
+
+                                @nths[c + 2]
+                                
+                                rows[1 + ((c - 1) / n)] -:= val
+                                cols[1 + ((c - 1) % n)] -:= val
+                                diagonal_up[1] -:= val
+                                solution[c] := 0
+                            }
+                        } 
+                        else {
+                            rows[1 + ((c - 1) / n)] +:= val
+                            cols[1 + ((c - 1) % n)] +:= val
+
+                            solution[c] := val 
+
+                            @nths[c + 2]
+                            
+                            rows[1 + ((c - 1) / n)] -:= val
+                            cols[1 + ((c - 1) % n)] -:= val
+                            solution[c] := 0
+                        }
+                    }
+                }
+            }
+        }
+        @nths[c]
+    }
+end
+
+
+#       ---------------------------- show ----------------------------
+# Show the solution of the magic square.
+procedure show()
+    repeat {         
+        if /findall & /printeach then {     # if !findall and !printeach
+	    print_square()
+            exit()
+        }
+	
+        if \findall & /printeach then {     # if findall and !printeach
+	    lastsolution := copy(solution)
+	    count +:= 1
+        }
+        
+        if /findall & \printeach then {    # if !findall and printeach
+	    print_square()
+            read() | stop("Aborted.")
+        } 
+        
+        if \findall & \printeach then { # if findall and printeach
+	    count +:= 1
+	    print_square()
+            read() | stop("Aborted.")
+        }
+	
+        @nths[n*n+1]
+    }
+end
+
+
+#       ---------------------------- i_in_solution  ----------------------------
+# Checking if the current value is already used in the square. If found return 1, if not return 0.
+procedure i_in_solution(val)
+    local i 
+    every i := 1 to n * n do {
+        if solution[i] = val then return 1
+    }
+    return 0
+end
+
+                                                                                                                         
+#       ---------------------------- print_square ----------------------------                                           
+# Print the current square - for testing only.                                                                           
+procedure print_square()                                                                                                 
+    local i                                                                                                              
+    every i := 1 to n * n do {                                                                                           
+        if i % n = 0 then writes(right(solution[i], 4), "\n")                                                            
+        else writes(right(solution[i], 4))                                                                               
+    }                                                                                                                    
+end
+
+
+#       ---------------------------- print_final_square ----------------------------                                                                   
+# Print the final_square.
+procedure print_final_square(lastsolution)
+    local i
+    every i := 1 to n * n do {
+        if i % n = 0 then writes(right(lastsolution[i], 4), "\n")
+	else writes(right(lastsolution[i], 4))
+    }                                                                                                                    
+    writes("\n")                                                                                                         
+end
